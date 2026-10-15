@@ -162,6 +162,12 @@ public class ReferenceManager
 
     private void LoadItemData()
     {
+        if (Game.ClientType == GameClientType.jSRO)
+        {
+            LoadReferenceFile($"{ServerDep}\\itemdata.txt", ItemData);
+            return;
+        }
+
         if (Game.ClientType < GameClientType.Thailand)
             LoadReferenceFile($"{ServerDep}\\ItemData.txt", ItemData);
         else
@@ -182,6 +188,12 @@ public class ReferenceManager
 
     private void LoadQuestData()
     {
+        if (Game.ClientType == GameClientType.jSRO)
+        {
+            LoadReferenceFile($"{ServerDep}\\questdata.txt", QuestData);
+            return;
+        }
+
         LoadReferenceFile($"{ServerDep}\\refquestrewarditems.txt", QuestRewardItems);
         LoadReferenceFile($"{ServerDep}\\refqusetreward.txt", QuestRewards);
 
@@ -198,6 +210,13 @@ public class ReferenceManager
 
     private void LoadTextData()
     {
+        if (Game.ClientType == GameClientType.jSRO)
+        {
+            LoadReferenceFile($"{ServerDep}\\textdataname.txt", TextData);
+            LoadReferenceFile($"{ServerDep}\\textquest.txt", TextData);
+            return;
+        }
+
         if (Game.ClientType >= GameClientType.Chinese)
             LoadReferenceListFile($"{ServerDep}\\TextUISystem.txt", TextData);
         else
@@ -207,6 +226,7 @@ public class ReferenceManager
             LoadReferenceListFile($"{ServerDep}\\TextZoneName.txt", TextData);
         else
             LoadReferenceFile($"{ServerDep}\\TextZoneName.txt", TextData);
+
         if (Game.ClientType >= GameClientType.Chinese)
         {
             LoadReferenceListFile($"{ServerDep}\\TextQuest_OtherString.txt", TextData);
@@ -324,7 +344,13 @@ public class ReferenceManager
         where TReference : IReference<TKey>, new()
     {
         if (Game.MediaPk2.TryGetFile(fileName, out var file))
-            LoadReferenceFile(file.OpenRead().GetStream(), destination);
+        {
+            LoadReferenceFile(file.OpenRead().GetStream(), destination, fileName);
+        }
+        else
+        {
+            Log.Notify($"Failed to open file {fileName}");
+        }
     }
 
     private void LoadReferenceListFile<TReference>(Stream stream, IList<TReference> destination)
@@ -404,29 +430,58 @@ public class ReferenceManager
         }
     }
 
-    private void LoadReferenceFile<TKey, TReference>(Stream stream, IDictionary<TKey, TReference> destination)
+    private void LoadReferenceFile<TKey, TReference>(
+        Stream stream,
+        IDictionary<TKey, TReference> destination,
+        string fileName = "")
         where TReference : IReference<TKey>, new()
     {
+        Log.Notify($"LoadReferenceFile CALLED for: {fileName} (stream length: {stream.Length})");
+
         using var reader = new StreamReader(stream);
+        bool verbose = fileName.EndsWith("itemdata.txt", StringComparison.OrdinalIgnoreCase);
+
+        int lineNumber = 0;
+        int loaded = 0;
+        int skipped = 0;
+        int failed = 0;
+
         while (!reader.EndOfStream)
         {
             var line = reader.ReadLineByCRLF();
+            lineNumber++;
 
-            //Skip invalid
             if (string.IsNullOrEmpty(line) || line.StartsWith("//"))
+            {
+                skipped++;
                 continue;
+            }
 
             try
             {
                 var reference = new TReference();
                 if (reference.Load(new ReferenceParser(line)))
+                {
                     destination[reference.PrimaryKey] = reference;
+                    loaded++;
+                }
+                else
+                {
+                    failed++;
+                    if (verbose)
+                        Log.Notify($"[{fileName}:{lineNumber}] Load returned false: {line}");
+                }
             }
-            catch
+            catch (Exception ex)
             {
-                Debug.WriteLine($"Exception in reference line: {line}");
+                failed++;
+                Log.Notify($"[{fileName}:{lineNumber}] Exception: {ex.Message}");
+                Log.Notify($"    Line: {line}");
             }
         }
+
+        if (verbose)
+            Log.Notify($"[{fileName}] loaded={loaded} skipped={skipped} failed={failed}");
     }
 
     public IEnumerable<uint> GetBaseSkills()
@@ -867,6 +922,7 @@ public class ReferenceManager
         builder.AppendFormat("AbilityItemByOptLevel: {0}\n", AbilityItemByOptLevel.Count);
         builder.AppendFormat("SkillByItemOptLevels: {0}\n", SkillByItemOptLevels.Count);
         builder.AppendFormat("ExtraAbilityByEquipItemOptLevel: {0}\n", ExtraAbilityByEquipItemOptLevel.Count);
+        builder.AppendFormat("LevelData: {0}\n", LevelData.Count);
 
         return builder.ToString();
     }

@@ -75,7 +75,7 @@ public class JobInfo
     /// <returns></returns>
     internal static JobInfo FromPacket(Packet packet)
     {
-        if (Game.ClientType <= GameClientType.Vietnam)
+        if (Game.ClientType == GameClientType.jSRO || Game.ClientType <= GameClientType.Vietnam)
             return new JobInfo
             {
                 Name = packet.ReadString(),

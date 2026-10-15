@@ -329,22 +329,22 @@ public partial class Main : UIWindow
         if (appUsageCount < 3)
             return;
 
-        Task.Delay(2000).ContinueWith(_ =>
-        {
-            if (InvokeRequired)
-            {
-                Invoke(new Action(() =>
-                {
-                    using var donationDialog = new DonationReminderDialog();
-                    donationDialog.ShowDialog(this);
-                }));
-            }
-            else
-            {
-                using var donationDialog = new DonationReminderDialog();
-                donationDialog.ShowDialog(this);
-            }
-        });
+        //Task.Delay(2000).ContinueWith(_ =>
+        //{
+        //    if (InvokeRequired)
+        //    {
+        //        Invoke(new Action(() =>
+        //        {
+        //            using var donationDialog = new DonationReminderDialog();
+        //            donationDialog.ShowDialog(this);
+        //        }));
+        //    }
+        //    else
+        //    {
+        //        using var donationDialog = new DonationReminderDialog();
+        //        donationDialog.ShowDialog(this);
+        //    }
+        //});
     }
 
     #endregion Methods

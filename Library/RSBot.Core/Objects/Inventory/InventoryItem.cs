@@ -294,8 +294,9 @@ public class InventoryItem
         if (destinationSlot == 0xFE)
             item.Slot = packet.ReadByte();
 
-        if (Game.ClientType > GameClientType.Thailand)
-            item.Rental = RentInfo.FromPacket(packet);
+        if (Game.ClientType != GameClientType.jSRO)
+            if (Game.ClientType > GameClientType.Thailand)
+                item.Rental = RentInfo.FromPacket(packet);
 
         item.ItemId = packet.ReadUInt();
 
@@ -306,6 +307,8 @@ public class InventoryItem
 
             return null;
         }
+
+        Log.Notify($"Found Item = {item.ItemId} CodeName = {record.CodeName}");
 
         if (record.IsEquip || record.IsFellowEquip || record.IsJobEquip)
         {
@@ -318,7 +321,7 @@ public class InventoryItem
             for (var iMagicOption = 0; iMagicOption < magicOptionsAmount; iMagicOption++)
                 item.MagicOptions.Add(MagicOptionInfo.FromPacket(packet));
 
-            if (Game.ClientType > GameClientType.Thailand)
+            if (Game.ClientType != GameClientType.jSRO && Game.ClientType > GameClientType.Thailand)
             {
                 //Read sockets & advanced elixirs
 
@@ -360,33 +363,46 @@ public class InventoryItem
                 item.Cos.Id = packet.ReadUInt(); //RefCharID
                 item.Cos.Name = packet.ReadString(); //Name
 
+                Log.Notify($"Found pet {record.CodeName} {item.Cos.Name}");
+
                 if (record.TypeID4 == 2)
-                    item.Cos.Rental = RentInfo.FromPacket(packet);
-                else if (Game.ClientType >= GameClientType.Chinese_Old)
-                    item.Cos.Level = packet.ReadByte(); // cos level
-
-                var buffCount = packet.ReadByte();
-                for (var i = 0; i < buffCount; i++)
                 {
-                    var buffType = packet.ReadByte();
-                    if (buffType == 0 || buffType == 20 || buffType == 6)
+                    if (Game.ClientType == GameClientType.jSRO)
                     {
-                        var itemId = packet.ReadUInt(); // buffType: 0 => skillId ? 20 => itemId
-                        var leftTime = packet.ReadUInt();
+                        packet.ReadUInt(); // SecondsToRentEndTime
                     }
+                    else
+                        item.Cos.Rental = RentInfo.FromPacket(packet);
+                }
+                else if (Game.ClientType != GameClientType.jSRO)
+                {
+                    if (Game.ClientType >= GameClientType.Chinese_Old)
+                        item.Cos.Level = packet.ReadByte(); // cos level
 
-                    if (buffType == 5)
+                    var buffCount = packet.ReadByte();
+                    for (var i = 0; i < buffCount; i++)
                     {
-                        var itemId = packet.ReadUInt();
-                        var leftTime = packet.ReadUInt();
-                        var leftTime2 = packet.ReadUInt();
-                        var unk2 = packet.ReadByte();
+                        var buffType = packet.ReadByte();
+                        if (buffType == 0 || buffType == 20 || buffType == 6)
+                        {
+                            var itemId = packet.ReadUInt(); // buffType: 0 => skillId ? 20 => itemId
+                            var leftTime = packet.ReadUInt();
+                        }
+
+                        if (buffType == 5)
+                        {
+                            var itemId = packet.ReadUInt();
+                            var leftTime = packet.ReadUInt();
+                            var leftTime2 = packet.ReadUInt();
+                            var unk2 = packet.ReadByte();
+                        }
                     }
                 }
             }
         }
         else if (record.IsTransmonster)
         {
+            Log.Notify($"item is IsTransmonster???");
             item.Cos.Id = packet.ReadUInt(); //Monster ObjectId
         }
         else if (record.IsMagicCube)
@@ -418,7 +434,7 @@ public class InventoryItem
                 }
             }
 
-            if (record.IsTrading)
+            if (record.IsTrading && Game.ClientType != GameClientType.jSRO)
                 //Owner name (Player name)
                 packet.ReadString();
         }

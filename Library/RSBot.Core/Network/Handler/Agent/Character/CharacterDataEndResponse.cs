@@ -34,22 +34,31 @@ internal class CharacterDataEndResponse : IPacketHandler
         packet = Game.ChunkedPacket;
         packet.Lock();
 
-        if (Game.ClientType >= GameClientType.Thailand)
+        bool isJSRO = Game.ClientType == GameClientType.jSRO;
+
+        if (isJSRO || Game.ClientType >= GameClientType.Thailand)
             packet.ReadUInt(); // serverTimestamp
 
-        var modelId = packet.ReadUInt();
+        var modelId = packet.ReadUInt(); // RefObjID
 
         var character = new Player(modelId);
+
         character.Scale = packet.ReadByte();
         character.Level = packet.ReadByte();
         character.MaxLevel = packet.ReadByte();
+
         character.Experience = packet.ReadLong();
         character.SkillExperience = packet.ReadUInt();
+
         character.Gold = packet.ReadULong();
         character.SkillPoints = packet.ReadUInt();
+
         character.StatPoints = packet.ReadUShort();
         character.BerzerkPoints = packet.ReadByte();
-        character.ExperienceChunk = packet.ReadUInt();
+
+        if (!isJSRO)
+            character.ExperienceChunk = packet.ReadUInt(); // < not in jSRO
+
         character.Health = packet.ReadInt();
         character.Mana = packet.ReadInt();
         character.AutoInverstExperience = (AutoInverstType)packet.ReadByte();
@@ -62,11 +71,15 @@ internal class CharacterDataEndResponse : IPacketHandler
         character.TotalPK = packet.ReadUShort();
         character.PKPenaltyPoint = packet.ReadUInt();
 
+        if (isJSRO)
+            goto ParseInventory;
+
         if (Game.ClientType >= GameClientType.Thailand)
             character.BerzerkLevel = packet.ReadByte();
 
         if (Game.ClientType > GameClientType.Thailand)
-            /*character.PvpFlag = (PvpFlag)*/packet.ReadByte();
+            /*character.PvpFlag = (PvpFlag)*/
+            packet.ReadByte(); // < not in jSRO
 
         if (Game.ClientType >= GameClientType.Chinese)
         {
@@ -104,7 +117,13 @@ internal class CharacterDataEndResponse : IPacketHandler
                 packet.ReadUShort();
         }
 
+    ParseInventory:
+        Log.Notify($"Health = {character.Health} Mana = {character.Mana} autoInverstExp = {character.AutoInverstExperience}");
+        Log.Notify($"DailyPK = {character.DailyPK} TotalPK = {character.TotalPK} PKPenaltyPoint = {character.PKPenaltyPoint}");
+
         character.Inventory = new CharacterInventory(packet);
+
+        Log.Notify("Guess inventory packet is fine?");
 
         if (Game.ClientType >= GameClientType.Thailand)
             character.Avatars = new InventoryItemCollection(packet);
@@ -112,7 +131,7 @@ internal class CharacterDataEndResponse : IPacketHandler
             character.Avatars = new InventoryItemCollection(5);
 
         // JOB2
-        if (Game.ClientType > GameClientType.Vietnam)
+        if (!isJSRO && Game.ClientType > GameClientType.Vietnam)
         {
             character.Job2SpecialtyBag = new InventoryItemCollection(packet);
 
@@ -120,11 +139,13 @@ internal class CharacterDataEndResponse : IPacketHandler
         }
 
         character.Skills = Skills.FromPacket(packet);
+
+
         character.QuestLog = QuestLog.FromPacket(packet);
 
         packet.ReadByte(); // Unknown
 
-        if (Game.ClientType > GameClientType.Thailand)
+        if (!isJSRO && Game.ClientType > GameClientType.Thailand)
         {
             var collectionBookStartedThemeCount = packet.ReadUInt();
             for (var i = 0; i < collectionBookStartedThemeCount; i++)
@@ -135,13 +156,18 @@ internal class CharacterDataEndResponse : IPacketHandler
             }
         }
 
+        // Movement and UniqueCharID
         character.ParseBionicDetails(packet);
 
         character.Name = packet.ReadString();
         character.JobInformation = JobInfo.FromPacket(packet);
         character.State.PvpState = (PvpState)packet.ReadByte();
+        Log.Warn($"character.State.PvpState = {character.State.PvpState}");
         character.OnTransport = packet.ReadBool(); //On transport?
         character.InCombat = packet.ReadBool();
+
+        if (Game.ClientType == GameClientType.jSRO)
+            goto JsonContinue;
 
         if (Game.ClientType >= GameClientType.Chinese)
             packet.ReadByte();
@@ -172,11 +198,23 @@ internal class CharacterDataEndResponse : IPacketHandler
             packet.ReadUShort(); // 0xFF
         }
 
+    JsonContinue:
+
+        if (Game.ClientType == GameClientType.jSRO)
+        {
+            if (character.OnTransport)
+                character.TransportUniqueId = packet.ReadUInt();
+
+            packet.ReadByte(); //PVP dress for the CTF event //0 = Red Side, 1 = Blue Side, 0xFF = None
+        }
+
         //GuideFlag
-        if (Game.ClientType >= GameClientType.Thailand)
+        if (Game.ClientType == GameClientType.jSRO || Game.ClientType >= GameClientType.Thailand)
             packet.ReadULong();
         else
             packet.ReadUInt();
+
+
 
         if (
             Game.ClientType == GameClientType.Chinese_Old
@@ -189,11 +227,19 @@ internal class CharacterDataEndResponse : IPacketHandler
         )
             packet.ReadByte();
 
+
         if (Game.ClientType == GameClientType.Chinese)
             packet.ReadByte();
 
-        character.JID = packet.ReadUInt();
-        character.IsGameMaster = packet.ReadBool();
+        if (Game.ClientType == GameClientType.jSRO)
+        {
+            character.IsGameMaster = packet.ReadBool();
+        }
+        else
+        {
+            character.JID = packet.ReadUInt();
+            character.IsGameMaster = packet.ReadBool();
+        }
 
         // Load Notification sound settings
         character.NotificationSounds.LoadPlayerSettings();

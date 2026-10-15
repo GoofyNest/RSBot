@@ -117,23 +117,35 @@ public class State
     {
         LifeState = (LifeState)packet.ReadByte();
 
+        Log.Warn($"LifeState = {LifeState}");
+
         if (LifeState == 0)
             LifeState = LifeState.Alive;
 
-        if (Game.ClientType > GameClientType.Thailand)
+        Log.Warn($"LifeState = {LifeState}");
+
+        if (Game.ClientType == GameClientType.jSRO || Game.ClientType > GameClientType.Thailand)
             packet.ReadByte(); //unkByte0
 
         MotionState = (MotionState)packet.ReadByte();
-        BodyState = (BodyState)packet.ReadByte();
+
+        Log.Warn($"MotionState = {MotionState}");
+
+        if (Game.ClientType != GameClientType.jSRO)
+            BodyState = (BodyState)packet.ReadByte();
 
         if (Game.ClientType > GameClientType.Vietnam193)
             packet.ReadByte(); // hasRedArrowEffect
 
         WalkSpeed = packet.ReadFloat();
+        Log.Warn($"WalkSpeed = {WalkSpeed}");
         RunSpeed = packet.ReadFloat();
+        Log.Warn($"RunSpeed = {RunSpeed}");
         BerzerkSpeed = packet.ReadFloat();
+        Log.Warn($"BerzerkSpeed = {BerzerkSpeed}");
 
         var buffCount = packet.ReadByte();
+        Log.Warn($"buffCount = {buffCount}");
         for (var i = 0; i < buffCount; i++)
         {
             var id = packet.ReadUInt();
