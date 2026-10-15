@@ -36,7 +36,7 @@ internal class CharacterDataEndResponse : IPacketHandler
 
         bool isJSRO = Game.ClientType == GameClientType.jSRO;
 
-        if (isJSRO || Game.ClientType >= GameClientType.Thailand)
+        if (Game.ClientType >= GameClientType.Thailand)
             packet.ReadUInt(); // serverTimestamp
 
         var modelId = packet.ReadUInt(); // RefObjID
@@ -56,8 +56,7 @@ internal class CharacterDataEndResponse : IPacketHandler
         character.StatPoints = packet.ReadUShort();
         character.BerzerkPoints = packet.ReadByte();
 
-        if (!isJSRO)
-            character.ExperienceChunk = packet.ReadUInt(); // < not in jSRO
+        character.ExperienceChunk = packet.ReadUInt();
 
         character.Health = packet.ReadInt();
         character.Mana = packet.ReadInt();
@@ -70,9 +69,6 @@ internal class CharacterDataEndResponse : IPacketHandler
 
         character.TotalPK = packet.ReadUShort();
         character.PKPenaltyPoint = packet.ReadUInt();
-
-        if (isJSRO)
-            goto ParseInventory;
 
         if (Game.ClientType >= GameClientType.Thailand)
             character.BerzerkLevel = packet.ReadByte();
@@ -117,7 +113,6 @@ internal class CharacterDataEndResponse : IPacketHandler
                 packet.ReadUShort();
         }
 
-    ParseInventory:
         Log.Notify($"Health = {character.Health} Mana = {character.Mana} autoInverstExp = {character.AutoInverstExperience}");
         Log.Notify($"DailyPK = {character.DailyPK} TotalPK = {character.TotalPK} PKPenaltyPoint = {character.PKPenaltyPoint}");
 

@@ -305,46 +305,6 @@ public partial class Main : UIWindow
     private void Main_Shown(object sender, EventArgs e)
     {
         _isWindowLoaded = true;
-        CheckAndShowDonationReminder();
-    }
-
-    /// <summary>
-    ///     Checks and shows donation reminder if needed (once per day)
-    /// </summary>
-    private void CheckAndShowDonationReminder()
-    {
-        if (GlobalConfig.Get("RSBot.DonationReminderDisabled", false))
-            return;
-
-        var lastShownDateStr = GlobalConfig.Get("RSBot.LastDonationReminderDate", string.Empty);
-        var today = DateTime.Now.ToString("yyyy-MM-dd");
-
-        if (lastShownDateStr == today)
-            return;
-
-        var appUsageCount = GlobalConfig.Get("RSBot.AppUsageCount", 0);
-        GlobalConfig.Set("RSBot.AppUsageCount", appUsageCount + 1);
-        GlobalConfig.Save();
-
-        if (appUsageCount < 3)
-            return;
-
-        //Task.Delay(2000).ContinueWith(_ =>
-        //{
-        //    if (InvokeRequired)
-        //    {
-        //        Invoke(new Action(() =>
-        //        {
-        //            using var donationDialog = new DonationReminderDialog();
-        //            donationDialog.ShowDialog(this);
-        //        }));
-        //    }
-        //    else
-        //    {
-        //        using var donationDialog = new DonationReminderDialog();
-        //        donationDialog.ShowDialog(this);
-        //    }
-        //});
     }
 
     #endregion Methods
